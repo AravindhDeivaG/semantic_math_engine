@@ -39,7 +39,7 @@ python -m pip install --upgrade pip
 
 ### Required Packages
 ```bash
-pip install "pydantic>=2.0" typing_extensions ollama
+pip install "pydantic>=2.0" typing_extensions ollama matplotlib
 ```
 
 ### Package Reference
@@ -52,6 +52,7 @@ pip install "pydantic>=2.0" typing_extensions ollama
 | Step 3 — Visualizer (`visualizer.py`) | *(stdlib only)* | — | `dataclasses`, `typing` (Mermaid & LaTeX rendering) |
 | Step 4 — LLM Caller (`interpreter.py`) | `ollama` | `0.6.3` | Ollama Python API client for `llama3.2:1b` structured output |
 | Step 5 — Engine (`engine.py`) | *(stdlib + internal)* | — | Orchestrates prompt, LLM call, graph solving, and visualization |
+| Step 6 — Chat UI (`app.py`) | `matplotlib` | `3.10.8` | Offline actual-LaTeX SVG rendering via `matplotlib.mathtext` (with stdlib `http.server`) |
 | Unit Tests (`tests/`) | *(stdlib `unittest`)* | — | Standalone runnable test scripts |
 
 ---
@@ -66,6 +67,7 @@ python tests/test_graph.py
 python tests/test_visualizer.py
 python tests/test_interpreter.py
 python tests/test_engine.py
+python tests/test_app.py
 python -m unittest discover -s tests -v
 ```
 
@@ -77,5 +79,16 @@ Or using an explicit interpreter path (e.g. `~/research_env`):
 ~/research_env/bin/python tests/test_visualizer.py
 ~/research_env/bin/python tests/test_interpreter.py
 ~/research_env/bin/python tests/test_engine.py
+~/research_env/bin/python tests/test_app.py
 ~/research_env/bin/python -m unittest discover -s tests -v
 ```
+
+---
+
+## 5. Launch the Chat Window UI
+
+```bash
+~/research_env/bin/python src/semantic_math/app.py --host 127.0.0.1 --port 8000
+```
+
+Then open `http://127.0.0.1:8000` in your browser.
