@@ -4,6 +4,7 @@ from semantic_math.engine import (
     DEFAULT_MATH_SYSTEM_PROMPT,
     EngineOutput,
     SemanticMathEngine,
+    UnsupportedMathIntentError,
 )
 from semantic_math.graph import (
     MathEvaluationError,
@@ -22,9 +23,11 @@ from semantic_math.schema import (
     NumberValue,
     Operand,
     OperationExpr,
+    ParserOutput,
     PowerOperation,
     SubtractOperation,
     get_expression_json_schema,
+    get_parser_json_schema,
 )
 from semantic_math.visualizer import GraphVisualizer
 
@@ -47,9 +50,12 @@ __all__ = [
     "NumberValue",
     "Operand",
     "OperationExpr",
+    "ParserOutput",
     "PowerOperation",
     "SemanticMathEngine",
     "SubtractOperation",
+    "UnsupportedMathIntentError",
     "call_llm",
     "get_expression_json_schema",
+    "get_parser_json_schema",
 ]

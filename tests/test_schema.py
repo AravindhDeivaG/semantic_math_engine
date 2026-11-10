@@ -18,9 +18,11 @@ from semantic_math.schema import (  # noqa: E402
     MathExpression,
     MultiplyOperation,
     NthRootOperation,
+    ParserOutput,
     PowerOperation,
     SubtractOperation,
     get_expression_json_schema,
+    get_parser_json_schema,
 )
 
 
@@ -138,6 +140,21 @@ class TestMathSchema(unittest.TestCase):
             with self.subTest(bad=bad):
                 with self.assertRaises(ValidationError):
                     MathExpression.model_validate(bad)
+
+    def test_parser_output_wrapper_accepts_expression_or_null(self) -> None:
+        valid_expr = ParserOutput.model_validate(
+            {"expression": {"op": "add", "operands": [1, 2]}}
+        )
+        self.assertIsInstance(valid_expr.expression, AddOperation)
+
+        valid_null = ParserOutput.model_validate({"expression": None})
+        self.assertIsNone(valid_null.expression)
+
+        parser_schema = get_parser_json_schema()
+        self.assertIn("expression", parser_schema["properties"])
+
+        with self.assertRaises(ValidationError):
+            ParserOutput.model_validate({"expression": None, "extra": 1})
 
 
 def main() -> int:

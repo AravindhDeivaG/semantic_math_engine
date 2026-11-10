@@ -12,7 +12,11 @@ _SRC_DIR = Path(__file__).resolve().parents[1] / "src"
 if str(_SRC_DIR) not in sys.path:
     sys.path.insert(0, str(_SRC_DIR))
 
-from semantic_math.engine import EngineOutput, SemanticMathEngine  # noqa: E402
+from semantic_math.engine import (  # noqa: E402
+    EngineOutput,
+    SemanticMathEngine,
+    UnsupportedMathIntentError,
+)
 from semantic_math.graph import MathGraph  # noqa: E402
 from semantic_math.interpreter import LLMCaller  # noqa: E402
 
@@ -84,7 +88,9 @@ class TestSemanticMathEngine(unittest.TestCase):
             ),
         ]
 
-        fake_client = _SequencedFakeClient({text: payload for text, payload, *_ in cases})
+        fake_client = _SequencedFakeClient(
+            {text: {"expression": payload} for text, payload, *_ in cases}
+        )
         caller = LLMCaller(model="llama3.2:1b", client=fake_client)
         engine = SemanticMathEngine(llm_caller=caller)
 
@@ -107,13 +113,19 @@ class TestSemanticMathEngine(unittest.TestCase):
                 self.assertTrue(output.mermaid.startswith("flowchart TD"))
 
                 # Instance attributes on engine reflect the latest solve call
-                self.assertEqual(engine.last_prompt, f"Math problem: {user_text}")
+                self.assertEqual(engine.last_prompt, user_text)
                 self.assertEqual(engine.raw_json, expected_json)
                 self.assertIsInstance(engine.graph, MathGraph)
                 self.assertAlmostEqual(engine.result or 0.0, expected_val)
                 self.assertEqual(engine.latex, expected_tex)
                 self.assertEqual(engine.equation_latex, expected_eq)
                 self.assertEqual(engine.mermaid, output.mermaid)
+
+    def test_unsupported_expression_null_raises(self) -> None:
+        fake_client = _SequencedFakeClient({"sine of 30": {"expression": None}})
+        engine = SemanticMathEngine(llm_caller=LLMCaller(client=fake_client))
+        with self.assertRaises(UnsupportedMathIntentError):
+            engine.solve("Compute the sine of 30 degrees.")
 
     def test_empty_prompt_rejected(self) -> None:
         engine = SemanticMathEngine(

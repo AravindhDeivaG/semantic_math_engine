@@ -1,7 +1,7 @@
 """Pydantic schemas for constrained, nested mathematical operation trees."""
 
 import math
-from typing import Annotated, Any, Literal, Union
+from typing import Annotated, Any, Literal, Optional, Union
 
 from pydantic import (
     AfterValidator,
@@ -125,6 +125,15 @@ class MathExpression(RootModel[Operand]):
     """Root expression schema validating a numeric literal or nested operation tree."""
 
 
+class ParserOutput(_BaseOperation):
+    """Structured LLM parser output wrapping an optional nested expression."""
+
+    expression: Optional[Operand] = Field(
+        ...,
+        description="Parsed mathematical expression tree, or null if unsupported.",
+    )
+
+
 for _model in (
     AddOperation,
     MultiplyOperation,
@@ -133,6 +142,7 @@ for _model in (
     PowerOperation,
     NthRootOperation,
     MathExpression,
+    ParserOutput,
 ):
     _model.model_rebuild()
 
@@ -140,3 +150,8 @@ for _model in (
 def get_expression_json_schema() -> dict[str, Any]:
     """Return the complete JSON schema dictionary for a nested math expression."""
     return MathExpression.model_json_schema()
+
+
+def get_parser_json_schema() -> dict[str, Any]:
+    """Return the complete JSON schema dictionary for ParserOutput."""
+    return ParserOutput.model_json_schema()

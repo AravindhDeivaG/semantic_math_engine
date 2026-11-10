@@ -92,15 +92,20 @@ class TestChatUIAndLatexRenderer(unittest.TestCase):
         fake = _FakeClient(
             {
                 "subtract 10 from sum of 20 and 33": {
-                    "op": "subtract",
-                    "left": {"op": "add", "operands": [20, 33]},
-                    "right": 10,
+                    "expression": {
+                        "op": "subtract",
+                        "left": {"op": "add", "operands": [20, 33]},
+                        "right": 10,
+                    }
                 },
                 "divide by zero": {
-                    "op": "divide",
-                    "numerator": 5,
-                    "denominator": 0,
+                    "expression": {
+                        "op": "divide",
+                        "numerator": 5,
+                        "denominator": 0,
+                    }
                 },
+                "sine of 30": {"expression": None},
             }
         )
         engine = SemanticMathEngine(llm_caller=LLMCaller(client=fake))
@@ -162,7 +167,7 @@ class TestChatUIAndLatexRenderer(unittest.TestCase):
             self.assertEqual(status, 200)
             self.assertEqual(len(hist_res["history"]), 1)  # type: ignore[index]
 
-            # Domain error returns 422
+            # Domain / unsupported intent errors return 422
             status, div_err = _http_request(
                 f"{base}/api/chat",
                 method="POST",
@@ -170,6 +175,14 @@ class TestChatUIAndLatexRenderer(unittest.TestCase):
             )
             self.assertEqual(status, 422)
             self.assertFalse(div_err["ok"])  # type: ignore[index]
+
+            status_unsup, unsup_err = _http_request(
+                f"{base}/api/chat",
+                method="POST",
+                payload={"message": "sine of 30"},
+            )
+            self.assertEqual(status_unsup, 422)
+            self.assertFalse(unsup_err["ok"])  # type: ignore[index]
 
             # Clear history
             status, clr_res = _http_request(f"{base}/api/clear", method="POST", payload={})

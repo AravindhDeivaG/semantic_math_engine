@@ -3,33 +3,129 @@
 from dataclasses import dataclass
 from typing import Any, Optional
 
-from semantic_math.graph import MathGraph
+from semantic_math.graph import MathGraph, MathGraphError
 from semantic_math.interpreter import LLMCaller
-from semantic_math.schema import MathExpression
+from semantic_math.schema import MathExpression, ParserOutput
 from semantic_math.visualizer import GraphVisualizer
 
-DEFAULT_MATH_SYSTEM_PROMPT = """Convert the user's math statement into a JSON expression tree matching the schema.
-Use ONLY these 6 operations (do NOT compute the final numeric answer yourself):
-- add: {"op": "add", "operands": [a, b, ...]} (2 or more operands)
-- multiply: {"op": "multiply", "operands": [a, b, ...]} (2 or more operands)
-- subtract: {"op": "subtract", "left": a, "right": b} (computes left - right)
-- divide: {"op": "divide", "numerator": a, "denominator": b} (computes numerator / denominator)
-- power: {"op": "power", "base": a, "exponent": b} (computes base ** exponent)
-- nth_root: {"op": "nth_root", "radicand": a, "n": b} (computes nth root of radicand)
+DEFAULT_MATH_SYSTEM_PROMPT = """You are a mathematical expression parser.
 
-Word-order and nesting rules:
-- Identify the OUTERMOST action first; nested clauses go inside operands.
-- "subtract X from Y" and "X subtracted from Y" ALWAYS mean left=Y, right=X.
-- "add X to <expr>" ALWAYS has outer "op": "add" with operands [X, <expr>].
+Convert the user's request into a nested mathematical expression.
+
+Available operations:
+
+1. add:
+   - Accepts two or more operands in "operands".
+   - Each operand can be a number or another expression.
+
+2. multiply:
+   - Accepts two or more operands in "operands".
+   - Each operand can be a number or another expression.
+
+3. subtract:
+   - Accepts strictly two operands: "left" and "right" (computes left - right).
+   - "subtract A from B" and "A subtracted from B" mean left = B, right = A.
+
+4. divide:
+   - Accepts strictly two operands: "numerator" and "denominator" (computes numerator / denominator).
+
+5. power:
+   - Accepts strictly two operands: "base" and "exponent" (computes base ** exponent).
+
+6. nth_root:
+   - Accepts strictly two operands: "radicand" and "n" (computes the nth root of radicand).
+
+Rules:
+
+- Represent mathematical operations using the specified JSON structure.
+- Nest operations whenever one operation is an operand of another.
+- Identify the outer operation first when clauses are nested.
+- Do not calculate the expression.
+- Do not invent operations.
+- If the request cannot be represented using ONLY add, subtract, multiply, divide, power, and nth_root, return null for expression.
 
 Examples:
-"Add 2 to 5" -> {"op": "add", "operands": [2, 5]}
-"Multiply 3, 4 and 5" -> {"op": "multiply", "operands": [3, 4, 5]}
-"Divide 12 by 4" -> {"op": "divide", "numerator": 12, "denominator": 4}
-"2 to the power of 5" -> {"op": "power", "base": 2, "exponent": 5}
-"Cube root of 27" -> {"op": "nth_root", "radicand": 27, "n": 3}
-"Subtract 4 from sum of 10 and 3" -> {"op": "subtract", "left": {"op": "add", "operands": [10, 3]}, "right": 4}
-"Add 2 to the 5 subtracted from 20" -> {"op": "add", "operands": [2, {"op": "subtract", "left": 20, "right": 5}]}"""
+
+Input: Add 1 and 2.
+
+Output:
+{
+    "expression": {
+        "op": "add",
+        "operands": [1, 2]
+    }
+}
+
+Input: Find the product of 3, 4, and 5.
+
+Output:
+{
+    "expression": {
+        "op": "multiply",
+        "operands": [3, 4, 5]
+    }
+}
+
+Input: Subtract 10 from the sum of 20 and 33.
+
+Output:
+{
+    "expression": {
+        "op": "subtract",
+        "left": {
+            "op": "add",
+            "operands": [20, 33]
+        },
+        "right": 10
+    }
+}
+
+Input: Add 3 to the 5 subtracted from 20.
+
+Output:
+{
+    "expression": {
+        "op": "add",
+        "operands": [
+            3,
+            {
+                "op": "subtract",
+                "left": 20,
+                "right": 5
+            }
+        ]
+    }
+}
+
+Input: Divide the cube root of 8 by 2 raised to the power of 3.
+
+Output:
+{
+    "expression": {
+        "op": "divide",
+        "numerator": {
+            "op": "nth_root",
+            "radicand": 8,
+            "n": 3
+        },
+        "denominator": {
+            "op": "power",
+            "base": 2,
+            "exponent": 3
+        }
+    }
+}
+
+Input: Compute the sine of 30 degrees.
+
+Output:
+{
+    "expression": null
+}"""
+
+
+class UnsupportedMathIntentError(MathGraphError):
+    """Raised when the LLM determines the input cannot use the 6 supported operations."""
 
 
 @dataclass(frozen=True)
@@ -77,17 +173,24 @@ class SemanticMathEngine:
         """Normalize and construct the prompt sent to the LLM caller."""
         if not isinstance(user_input, str) or not user_input.strip():
             raise ValueError("User input must be a non-empty math statement.")
-        return f"Math problem: {user_input.strip()}"
+        return user_input.strip()
 
     def solve(self, user_input: str) -> EngineOutput:
         """Run the full pipeline and store graph, result, and visualizations on self."""
         prompt = self.build_prompt(user_input)
-        raw_json = self.llm_caller.call(
+        raw_payload = self.llm_caller.call(
             prompt=prompt,
-            schema=MathExpression,
+            schema=ParserOutput,
             system_prompt=self.system_prompt,
         )
-        expression = MathExpression.model_validate(raw_json)
+        parsed_output = ParserOutput.model_validate(raw_payload)
+        if parsed_output.expression is None:
+            raise UnsupportedMathIntentError(
+                "Request cannot be represented using only add, subtract, multiply, divide, power, and nth_root."
+            )
+
+        expression = MathExpression(parsed_output.expression)
+        raw_expr_json = raw_payload["expression"]
         graph = MathGraph.from_expression(expression)
         result = graph.evaluate()
         latex = self.visualizer.to_latex(graph)
@@ -95,7 +198,7 @@ class SemanticMathEngine:
         mermaid = self.visualizer.to_mermaid(graph)
 
         self.last_prompt = prompt
-        self.raw_json = raw_json
+        self.raw_json = raw_expr_json
         self.expression = expression
         self.graph = graph
         self.result = result
@@ -105,7 +208,7 @@ class SemanticMathEngine:
 
         return EngineOutput(
             prompt=prompt,
-            raw_json=raw_json,
+            raw_json=raw_expr_json,
             expression=expression,
             graph=graph,
             result=result,
@@ -113,4 +216,3 @@ class SemanticMathEngine:
             equation_latex=equation_latex,
             mermaid=mermaid,
         )
-
