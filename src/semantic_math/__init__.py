@@ -20,10 +20,12 @@ from semantic_math.schema import (
     SubtractOperation,
     get_expression_json_schema,
 )
+from semantic_math.visualizer import GraphVisualizer
 
 __all__ = [
     "AddOperation",
     "DivideOperation",
+    "GraphVisualizer",
     "MathEvaluationError",
     "MathExpression",
     "MathGraph",
