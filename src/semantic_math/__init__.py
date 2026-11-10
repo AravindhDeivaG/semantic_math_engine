@@ -1,5 +1,10 @@
 """Semantic math text engine package."""
 
+from semantic_math.engine import (
+    DEFAULT_MATH_SYSTEM_PROMPT,
+    EngineOutput,
+    SemanticMathEngine,
+)
 from semantic_math.graph import (
     MathEvaluationError,
     MathGraph,
@@ -7,6 +12,7 @@ from semantic_math.graph import (
     MathNode,
     NodeType,
 )
+from semantic_math.interpreter import LLMCaller, LLMCallerError, call_llm
 from semantic_math.schema import (
     AddOperation,
     DivideOperation,
@@ -24,8 +30,12 @@ from semantic_math.visualizer import GraphVisualizer
 
 __all__ = [
     "AddOperation",
+    "DEFAULT_MATH_SYSTEM_PROMPT",
     "DivideOperation",
+    "EngineOutput",
     "GraphVisualizer",
+    "LLMCaller",
+    "LLMCallerError",
     "MathEvaluationError",
     "MathExpression",
     "MathGraph",
@@ -38,6 +48,8 @@ __all__ = [
     "Operand",
     "OperationExpr",
     "PowerOperation",
+    "SemanticMathEngine",
     "SubtractOperation",
+    "call_llm",
     "get_expression_json_schema",
 ]

@@ -37,12 +37,7 @@ python -m pip install --upgrade pip
 
 ## 3. Install Python Packages
 
-### Currently Required (Steps 1–3: `schema.py`, `graph.py` & `visualizer.py`)
-```bash
-pip install "pydantic>=2.0" typing_extensions
-```
-
-### Full Stack (including Step 4: `interpreter.py` with Ollama)
+### Required Packages
 ```bash
 pip install "pydantic>=2.0" typing_extensions ollama
 ```
@@ -55,7 +50,8 @@ pip install "pydantic>=2.0" typing_extensions ollama
 | Step 1 — Schema (`schema.py`) | `typing_extensions` | `4.16.0` | `TypeAliasType` support for recursive `Operand` schemas on Python 3.10 |
 | Step 2 — Graph (`graph.py`) | *(stdlib only)* | — | `enum`, `dataclasses`, `math`, `typing` |
 | Step 3 — Visualizer (`visualizer.py`) | *(stdlib only)* | — | `dataclasses`, `typing` (Mermaid & LaTeX rendering) |
-| Step 4 — Interpreter (`interpreter.py`, upcoming) | `ollama` | `0.6.3` | Ollama Python API client for `llama3.2:1b` tool calling |
+| Step 4 — LLM Caller (`interpreter.py`) | `ollama` | `0.6.3` | Ollama Python API client for `llama3.2:1b` structured output |
+| Step 5 — Engine (`engine.py`) | *(stdlib + internal)* | — | Orchestrates prompt, LLM call, graph solving, and visualization |
 | Unit Tests (`tests/`) | *(stdlib `unittest`)* | — | Standalone runnable test scripts |
 
 ---
@@ -68,6 +64,8 @@ With your virtual environment activated:
 python tests/test_schema.py
 python tests/test_graph.py
 python tests/test_visualizer.py
+python tests/test_interpreter.py
+python tests/test_engine.py
 python -m unittest discover -s tests -v
 ```
 
@@ -77,5 +75,7 @@ Or using an explicit interpreter path (e.g. `~/research_env`):
 ~/research_env/bin/python tests/test_schema.py
 ~/research_env/bin/python tests/test_graph.py
 ~/research_env/bin/python tests/test_visualizer.py
+~/research_env/bin/python tests/test_interpreter.py
+~/research_env/bin/python tests/test_engine.py
 ~/research_env/bin/python -m unittest discover -s tests -v
 ```
