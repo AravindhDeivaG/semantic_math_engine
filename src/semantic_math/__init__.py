@@ -1,5 +1,12 @@
 """Semantic math text engine package."""
 
+from semantic_math.graph import (
+    MathEvaluationError,
+    MathGraph,
+    MathGraphError,
+    MathNode,
+    NodeType,
+)
 from semantic_math.schema import (
     AddOperation,
     DivideOperation,
@@ -17,8 +24,13 @@ from semantic_math.schema import (
 __all__ = [
     "AddOperation",
     "DivideOperation",
+    "MathEvaluationError",
     "MathExpression",
+    "MathGraph",
+    "MathGraphError",
+    "MathNode",
     "MultiplyOperation",
+    "NodeType",
     "NthRootOperation",
     "NumberValue",
     "Operand",
