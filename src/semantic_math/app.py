@@ -1,6 +1,7 @@
 """Phased web chat UI and offline actual-LaTeX SVG renderer for SemanticMathEngine."""
 
 import argparse
+import html as html_lib
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import io
@@ -22,6 +23,7 @@ matplotlib.use("Agg")
 from matplotlib import mathtext  # noqa: E402
 from matplotlib.font_manager import FontProperties  # noqa: E402
 
+from semantic_math.config import DEFAULT_MODEL, MODEL_ENV_VAR  # noqa: E402
 from semantic_math.engine import SemanticMathEngine  # noqa: E402
 from semantic_math.graph import MathGraphError  # noqa: E402
 from semantic_math.interpreter import LLMCallerError  # noqa: E402
@@ -311,7 +313,7 @@ _CHAT_HTML = r"""<!DOCTYPE html>
   <header>
     <div>
       <h1>Semantic Math Text Engine</h1>
-      <div class="meta">Ollama (llama3.2:1b) &rarr; Pydantic Schema &rarr; C++ MathGraph &rarr; Rendered LaTeX</div>
+      <div class="meta">Ollama (__MODEL_NAME__) &rarr; Pydantic Schema &rarr; C++ MathGraph &rarr; Rendered LaTeX</div>
     </div>
     <button class="btn-secondary" id="clearBtn" type="button">Clear Chat</button>
   </header>
@@ -487,12 +489,14 @@ def _make_handler(session: ChatSession) -> type[BaseHTTPRequestHandler]:
         def do_GET(self) -> None:
             path = urlsplit(self.path).path
             if path in ("/", "", "/index.html"):
-                html = _CHAT_HTML.encode("utf-8")
+                rendered_html = _CHAT_HTML.replace(
+                    "__MODEL_NAME__", html_lib.escape(session.engine.model)
+                ).encode("utf-8")
                 self.send_response(HTTPStatus.OK)
                 self.send_header("Content-Type", "text/html; charset=utf-8")
-                self.send_header("Content-Length", str(len(html)))
+                self.send_header("Content-Length", str(len(rendered_html)))
                 self.end_headers()
-                self.wfile.write(html)
+                self.wfile.write(rendered_html)
                 return
 
             if path == "/favicon.ico":
@@ -543,9 +547,11 @@ def create_chat_server(
     host: str = "127.0.0.1",
     port: int = 8000,
     engine: Optional[SemanticMathEngine] = None,
+    model: Optional[str] = None,
 ) -> tuple[ThreadingHTTPServer, ChatSession]:
     """Create a ThreadingHTTPServer serving the chat window and LaTeX API."""
-    session = ChatSession(engine=engine)
+    resolved_engine = engine if engine is not None else SemanticMathEngine(model=model)
+    session = ChatSession(engine=resolved_engine)
     handler_cls = _make_handler(session)
     server = ThreadingHTTPServer((host, port), handler_cls)
     return server, session
@@ -556,11 +562,21 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Semantic Math Engine Chat UI")
     parser.add_argument("--host", default="127.0.0.1", help="Bind host (default: 127.0.0.1)")
     parser.add_argument("--port", type=int, default=8000, help="Bind port (default: 8000)")
+    parser.add_argument(
+        "--model",
+        default=None,
+        help=f"Ollama model name (default: ${MODEL_ENV_VAR} or {DEFAULT_MODEL})",
+    )
     args = parser.parse_args()
 
-    server, _session = create_chat_server(host=args.host, port=args.port)
+    server, session = create_chat_server(
+        host=args.host, port=args.port, model=args.model
+    )
     actual_host, actual_port = server.server_address
-    print(f"Semantic Math Chat UI running at http://{actual_host}:{actual_port}")
+    print(
+        f"Semantic Math Chat UI ({session.engine.model}) running at "
+        f"http://{actual_host}:{actual_port}"
+    )
     try:
         server.serve_forever()
     except KeyboardInterrupt:

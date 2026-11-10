@@ -50,14 +50,24 @@ pip install "pydantic>=2.0" typing_extensions ollama matplotlib
 | Step 1 — Schema (`schema.py`) | `typing_extensions` | `4.16.0` | `TypeAliasType` support for recursive `Operand` schemas on Python 3.10 |
 | Step 2 — Graph (`graph.py`) | *(stdlib only)* | — | `enum`, `dataclasses`, `math`, `typing` |
 | Step 3 — Visualizer (`visualizer.py`) | *(stdlib only)* | — | `dataclasses`, `typing` (Mermaid & LaTeX rendering) |
-| Step 4 — LLM Caller (`interpreter.py`) | `ollama` | `0.6.3` | Ollama Python API client for `llama3.2:1b` structured output |
+| Step 4 — LLM Caller (`interpreter.py`) | `ollama` | `0.6.3` | Ollama Python API client for configurable model (`config.DEFAULT_MODEL`) structured output |
 | Step 5 — Engine (`engine.py`) | *(stdlib + internal)* | — | Orchestrates prompt, LLM call, graph solving, and visualization |
 | Step 6 — Chat UI (`app.py`) | `matplotlib` | `3.10.8` | Offline actual-LaTeX SVG rendering via `matplotlib.mathtext` (with stdlib `http.server`) |
 | Unit Tests (`tests/`) | *(stdlib `unittest`)* | — | Standalone runnable test scripts |
 
 ---
 
-## 4. Run Component Tests
+## 4. Configure the Ollama Model
+
+The default model is defined centrally in `src/semantic_math/config.py` (`DEFAULT_MODEL = "llama3.2:1b"`). You can switch models (e.g., to `qwen:8b`) in any of three ways:
+
+1. Edit `DEFAULT_MODEL` in `src/semantic_math/config.py`.
+2. Set the environment variable: `export SEMANTIC_MATH_MODEL=qwen:8b`.
+3. Pass `--model qwen:8b` on the CLI (`app.py` or `tests/test_engine.py --live`).
+
+---
+
+## 5. Run Component Tests
 
 With your virtual environment activated:
 
@@ -85,10 +95,10 @@ Or using an explicit interpreter path (e.g. `~/research_env`):
 
 ---
 
-## 5. Launch the Chat Window UI
+## 6. Launch the Chat Window UI
 
 ```bash
-~/research_env/bin/python src/semantic_math/app.py --host 127.0.0.1 --port 8000
+~/research_env/bin/python src/semantic_math/app.py --host 127.0.0.1 --port 8000 --model qwen:8b
 ```
 
 Then open `http://127.0.0.1:8000` in your browser.

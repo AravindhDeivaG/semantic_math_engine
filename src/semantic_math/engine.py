@@ -150,13 +150,14 @@ class SemanticMathEngine:
         llm_caller: Optional[LLMCaller] = None,
         visualizer: Optional[GraphVisualizer] = None,
         system_prompt: str = DEFAULT_MATH_SYSTEM_PROMPT,
+        model: Optional[str] = None,
     ) -> None:
         """Initialize engine components and reset cached instance state."""
         self.system_prompt = system_prompt
         self.llm_caller = (
             llm_caller
             if llm_caller is not None
-            else LLMCaller(model="llama3.2:1b", system_prompt=system_prompt)
+            else LLMCaller(model=model, system_prompt=system_prompt)
         )
         self.visualizer = visualizer if visualizer is not None else GraphVisualizer()
 
@@ -168,6 +169,11 @@ class SemanticMathEngine:
         self.latex: Optional[str] = None
         self.equation_latex: Optional[str] = None
         self.mermaid: Optional[str] = None
+
+    @property
+    def model(self) -> str:
+        """Return the configured Ollama model name for this engine."""
+        return self.llm_caller.model
 
     def build_prompt(self, user_input: str) -> str:
         """Normalize and construct the prompt sent to the LLM caller."""

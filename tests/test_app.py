@@ -108,7 +108,7 @@ class TestChatUIAndLatexRenderer(unittest.TestCase):
                 "sine of 30": {"expression": None},
             }
         )
-        engine = SemanticMathEngine(llm_caller=LLMCaller(client=fake))
+        engine = SemanticMathEngine(llm_caller=LLMCaller(model="qwen:8b", client=fake))
         server, session = create_chat_server(host="127.0.0.1", port=0, engine=engine)
         port = server.server_address[1]
         thread = threading.Thread(target=server.serve_forever, daemon=True)
@@ -121,6 +121,7 @@ class TestChatUIAndLatexRenderer(unittest.TestCase):
             self.assertEqual(status, 200)
             self.assertIsInstance(html, str)
             self.assertIn("Semantic Math Text Engine", html)
+            self.assertIn("Ollama (qwen:8b)", html)
             self.assertIn("/api/chat", html)
             # Ensure JS escaped newlines are preserved (not expanded into broken JS literals)
             self.assertIn(r'"\n\n"', html)

@@ -6,6 +6,8 @@ from typing import Any, Optional, Union
 import ollama
 from pydantic import BaseModel, ValidationError
 
+from semantic_math.config import DEFAULT_TEMPERATURE, get_default_model
+
 
 class LLMCallerError(RuntimeError):
     """Raised when the Ollama call or schema parsing/validation fails."""
@@ -34,15 +36,24 @@ class LLMCaller:
 
     def __init__(
         self,
-        model: str = "llama3.2:1b",
+        model: Optional[str] = None,
         system_prompt: Optional[str] = None,
-        temperature: float = 0.0,
+        temperature: Optional[float] = None,
         client: Optional[Any] = None,
     ) -> None:
         """Configure target model, optional default system prompt, and Ollama client."""
-        self.model = model
+        if model is None:
+            resolved_model = get_default_model()
+        elif isinstance(model, str) and model.strip():
+            resolved_model = model.strip()
+        else:
+            raise ValueError("Model name must be a non-empty string.")
+
+        self.model = resolved_model
         self.system_prompt = system_prompt
-        self.temperature = temperature
+        self.temperature = (
+            DEFAULT_TEMPERATURE if temperature is None else temperature
+        )
         self.client = client if client is not None else ollama.Client()
 
     def call(
@@ -99,9 +110,9 @@ class LLMCaller:
 def call_llm(
     prompt: str,
     schema: Union[type[BaseModel], dict[str, Any]],
-    model: str = "llama3.2:1b",
+    model: Optional[str] = None,
     system_prompt: Optional[str] = None,
-    temperature: float = 0.0,
+    temperature: Optional[float] = None,
     client: Optional[Any] = None,
 ) -> Any:
     """Convenience function wrapping LLMCaller for one-off prompt+schema calls."""

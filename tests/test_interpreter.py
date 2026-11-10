@@ -1,16 +1,19 @@
 """Unit tests for semantic_math.interpreter (LLMCaller and call_llm)."""
 
 import json
+import os
 import sys
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
+from unittest.mock import patch
 
 _SRC_DIR = Path(__file__).resolve().parents[1] / "src"
 if str(_SRC_DIR) not in sys.path:
     sys.path.insert(0, str(_SRC_DIR))
 
+from semantic_math.config import DEFAULT_MODEL, MODEL_ENV_VAR  # noqa: E402
 from semantic_math.interpreter import LLMCaller, LLMCallerError, call_llm  # noqa: E402
 from semantic_math.schema import MathExpression  # noqa: E402
 
@@ -39,13 +42,13 @@ class TestLLMCaller(unittest.TestCase):
     def test_call_with_pydantic_model_and_custom_system_prompt(self) -> None:
         payload = {"op": "add", "operands": [1, 3]}
         fake = _FakeOllamaClient(json.dumps(payload))
-        caller = LLMCaller(model="llama3.2:1b", system_prompt="default sys", client=fake)
+        caller = LLMCaller(system_prompt="default sys", client=fake)
 
         result = caller.call("Add 1 to 3", MathExpression)
         self.assertEqual(result, payload)
         self.assertEqual(len(fake.calls), 1)
         recorded = fake.calls[0]
-        self.assertEqual(recorded["model"], "llama3.2:1b")
+        self.assertEqual(recorded["model"], DEFAULT_MODEL)
         self.assertEqual(recorded["format"], MathExpression.model_json_schema())
         self.assertEqual(recorded["options"], {"temperature": 0.0})
         self.assertEqual(
@@ -56,21 +59,34 @@ class TestLLMCaller(unittest.TestCase):
             ],
         )
 
+    def test_model_configuration_env_and_explicit_override(self) -> None:
+        fake = _FakeOllamaClient('{"answer": 42}')
+        with patch.dict(os.environ, {MODEL_ENV_VAR: "qwen:8b"}):
+            caller_env = LLMCaller(client=fake)
+            self.assertEqual(caller_env.model, "qwen:8b")
+
+            caller_explicit = LLMCaller(model="qwen2.5:7b", client=fake)
+            self.assertEqual(caller_explicit.model, "qwen2.5:7b")
+
+        with self.assertRaises(ValueError):
+            LLMCaller(model="   ", client=fake)
+
     def test_call_with_raw_dict_schema_and_dict_response(self) -> None:
         raw_schema = {"type": "object", "properties": {"answer": {"type": "number"}}}
         fake = _FakeOllamaClient('{"answer": 42}', as_dict=True)
         result = call_llm(
             prompt="What is the answer?",
             schema=raw_schema,
-            model="llama3.2:1b",
+            model="qwen:8b",
             client=fake,
         )
         self.assertEqual(result, {"answer": 42})
+        self.assertEqual(fake.calls[0]["model"], "qwen:8b")
         self.assertEqual(fake.calls[0]["format"], raw_schema)
 
     def test_validation_and_error_handling(self) -> None:
         fake = _FakeOllamaClient("{}")
-        caller = LLMCaller(model="llama3.2:1b", client=fake)
+        caller = LLMCaller(client=fake)
 
         with self.assertRaises(ValueError):
             caller.call("   ", MathExpression)

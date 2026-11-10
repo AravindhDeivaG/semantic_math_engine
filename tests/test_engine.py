@@ -91,7 +91,7 @@ class TestSemanticMathEngine(unittest.TestCase):
         fake_client = _SequencedFakeClient(
             {text: {"expression": payload} for text, payload, *_ in cases}
         )
-        caller = LLMCaller(model="llama3.2:1b", client=fake_client)
+        caller = LLMCaller(client=fake_client)
         engine = SemanticMathEngine(llm_caller=caller)
 
         # Initial instance state is empty
@@ -127,6 +127,10 @@ class TestSemanticMathEngine(unittest.TestCase):
         with self.assertRaises(UnsupportedMathIntentError):
             engine.solve("Compute the sine of 30 degrees.")
 
+    def test_engine_model_param(self) -> None:
+        engine = SemanticMathEngine(model="qwen:8b")
+        self.assertEqual(engine.model, "qwen:8b")
+
     def test_empty_prompt_rejected(self) -> None:
         engine = SemanticMathEngine(
             llm_caller=LLMCaller(client=_SequencedFakeClient({}))
@@ -135,9 +139,10 @@ class TestSemanticMathEngine(unittest.TestCase):
             engine.solve("   ")
 
 
-def _run_live_prompt(prompt_text: str) -> int:
-    engine = SemanticMathEngine()
+def _run_live_prompt(prompt_text: str, model: str | None = None) -> int:
+    engine = SemanticMathEngine(model=model)
     out = engine.solve(prompt_text)
+    print(f"Model    : {engine.model}")
     print(f"Prompt   : {out.prompt}")
     print(f"JSON     : {json.dumps(out.raw_json)}")
     print(f"Result   : {out.result}")
@@ -151,9 +156,10 @@ def _run_live_prompt(prompt_text: str) -> int:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("--live", type=str, default=None)
+    parser.add_argument("--model", type=str, default=None)
     args, remaining = parser.parse_known_args()
     if args.live is not None:
-        raise SystemExit(_run_live_prompt(args.live))
+        raise SystemExit(_run_live_prompt(args.live, model=args.model))
     sys.argv = [sys.argv[0], *remaining]
     unittest.main(verbosity=2)
 

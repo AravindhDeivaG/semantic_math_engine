@@ -1,5 +1,11 @@
 """Semantic math text engine package."""
 
+from semantic_math.config import (
+    DEFAULT_MODEL,
+    DEFAULT_TEMPERATURE,
+    MODEL_ENV_VAR,
+    get_default_model,
+)
 from semantic_math.engine import (
     DEFAULT_MATH_SYSTEM_PROMPT,
     EngineOutput,
@@ -34,11 +40,14 @@ from semantic_math.visualizer import GraphVisualizer
 __all__ = [
     "AddOperation",
     "DEFAULT_MATH_SYSTEM_PROMPT",
+    "DEFAULT_MODEL",
+    "DEFAULT_TEMPERATURE",
     "DivideOperation",
     "EngineOutput",
     "GraphVisualizer",
     "LLMCaller",
     "LLMCallerError",
+    "MODEL_ENV_VAR",
     "MathEvaluationError",
     "MathExpression",
     "MathGraph",
@@ -56,6 +65,7 @@ __all__ = [
     "SubtractOperation",
     "UnsupportedMathIntentError",
     "call_llm",
+    "get_default_model",
     "get_expression_json_schema",
     "get_parser_json_schema",
 ]
