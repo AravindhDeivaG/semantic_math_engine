@@ -34,28 +34,29 @@ class _BaseOperation(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-class _VariadicOperation(_BaseOperation):
-    """Shared base for operations accepting a list of 2 or more operands."""
-
-    operands: list["Operand"] = Field(
+def _variadic_operands_field() -> Any:
+    """Shared Field definition for variadic operations (2+ operands)."""
+    return Field(
         ...,
         min_length=2,
         description="List of 2 or more operands (numbers or nested operations).",
     )
 
 
-class AddOperation(_VariadicOperation):
+class AddOperation(_BaseOperation):
     """Sum of two or more operands."""
 
     op: Literal["add"] = Field(..., description="Addition operation discriminator.")
+    operands: list["Operand"] = _variadic_operands_field()
 
 
-class MultiplyOperation(_VariadicOperation):
+class MultiplyOperation(_BaseOperation):
     """Product of two or more operands."""
 
     op: Literal["multiply"] = Field(
         ..., description="Multiplication operation discriminator."
     )
+    operands: list["Operand"] = _variadic_operands_field()
 
 
 class SubtractOperation(_BaseOperation):
